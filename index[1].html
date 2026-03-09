@@ -1,0 +1,311 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Bloco Médico - Bloco Médico de Plantão</title>
+
+<style>
+body{
+font-family: Arial, Helvetica, sans-serif;
+margin:0;
+background:#eef2f5;
+}
+
+header{
+background:#1f2d3d;
+color:white;
+padding:16px;
+font-size:22px;
+}
+
+#tabs{
+display:flex;
+flex-wrap:wrap;
+background:#2c3e50;
+}
+
+.tab{
+padding:10px 16px;
+color:white;
+cursor:pointer;
+}
+
+.tab.active{
+background:#16a085;
+}
+
+.section{
+display:none;
+padding:20px;
+}
+
+.section.active{
+display:block;
+}
+
+textarea,input{
+width:100%;
+padding:10px;
+margin-top:8px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+textarea{
+height:150px;
+}
+
+button{
+margin-top:10px;
+padding:8px 14px;
+border:none;
+border-radius:6px;
+background:#16a085;
+color:white;
+cursor:pointer;
+}
+
+button:hover{
+background:#13856b;
+}
+
+.card{
+background:white;
+padding:10px;
+border-radius:6px;
+margin-top:10px;
+border:1px solid #ddd;
+}
+</style>
+</head>
+
+<body>
+
+<header>Bloco Médico de Plantão</header>
+
+<div id="tabs">
+<div class="tab active" onclick="openTab('anamnese',event)">Anamnese</div>
+<div class="tab" onclick="openTab('hipotese',event)">Hipótese</div>
+<div class="tab" onclick="openTab('exames',event)">Exames</div>
+<div class="tab" onclick="openTab('prescricao',event)">Prescrição</div>
+<div class="tab" onclick="openTab('conduta',event)">Conduta</div>
+<div class="tab" onclick="openTab('protocolos',event)">Protocolos</div>
+<div class="tab" onclick="openTab('pesquisa',event)">Pesquisa</div>
+</div>
+
+<div id="anamnese" class="section active">
+<h3>Anamnese</h3>
+<textarea></textarea>
+</div>
+
+<div id="hipotese" class="section">
+<h3>Hipótese diagnóstica</h3>
+<textarea></textarea>
+</div>
+
+<div id="exames" class="section">
+<h3>Exames</h3>
+<textarea></textarea>
+</div>
+
+<div id="prescricao" class="section">
+<h3>Prescrição</h3>
+<textarea></textarea>
+</div>
+
+<div id="conduta" class="section">
+<h3>Conduta</h3>
+<textarea></textarea>
+</div>
+
+<div id="protocolos" class="section">
+
+<h3>Criar protocolo</h3>
+
+<input id="nomeProtocolo" placeholder="Nome do protocolo">
+
+<textarea id="textoProtocolo" placeholder="Digite o protocolo"></textarea>
+
+<button onclick="salvarProtocolo()">Salvar protocolo</button>
+
+<h3>Biblioteca de protocolos</h3>
+
+<div id="listaProtocolos"></div>
+
+</div>
+
+<div id="pesquisa" class="section">
+
+<h3>Pesquisa</h3>
+
+<input id="campoPesquisa" placeholder="Pesquisar..." onkeyup="pesquisarTexto()">
+
+<div id="resultadoPesquisa"></div>
+
+</div>
+
+<script>
+
+function openTab(id,evt){
+
+document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+
+evt.target.classList.add("active");
+document.getElementById(id).classList.add("active");
+
+}
+
+let biblioteca = JSON.parse(localStorage.getItem("biblioteca_protocolos")) || [];
+
+function salvarProtocolo(){
+
+let nome = document.getElementById("nomeProtocolo").value.trim();
+let texto = document.getElementById("textoProtocolo").value.trim();
+
+if(!nome || !texto){
+alert("Preencha nome e protocolo");
+return;
+}
+
+biblioteca.push({nome:nome,texto:texto});
+
+localStorage.setItem("biblioteca_protocolos", JSON.stringify(biblioteca));
+
+document.getElementById("nomeProtocolo").value="";
+document.getElementById("textoProtocolo").value="";
+
+renderProtocolos();
+
+}
+
+function renderProtocolos(){
+
+let lista=document.getElementById("listaProtocolos");
+
+lista.innerHTML="";
+
+biblioteca.forEach((p,i)=>{
+
+let div=document.createElement("div");
+div.className="card";
+
+div.innerHTML=`
+<b>${p.nome}</b><br><br>
+<button onclick="ver(${i})">Ver</button>
+<button onclick="copiar(${i})">Copiar</button>
+<button onclick="excluir(${i})">Excluir</button>
+`;
+
+lista.appendChild(div);
+
+});
+
+}
+
+function ver(i){
+
+let nome = biblioteca[i].nome;
+let texto = biblioteca[i].texto;
+
+let overlay=document.createElement("div");
+overlay.style.position="fixed";
+overlay.style.top="0";
+overlay.style.left="0";
+overlay.style.width="100%";
+overlay.style.height="100%";
+overlay.style.background="rgba(0,0,0,0.4)";
+
+let modal=document.createElement("div");
+modal.style.position="fixed";
+modal.style.top="50%";
+modal.style.left="50%";
+modal.style.transform="translate(-50%,-50%)";
+modal.style.background="white";
+modal.style.padding="20px";
+modal.style.borderRadius="8px";
+modal.style.maxWidth="600px";
+modal.style.width="90%";
+modal.style.maxHeight="80%";
+modal.style.overflow="auto";
+
+modal.innerHTML=`
+<h3>${nome}</h3>
+
+<pre style="white-space:pre-wrap; user-select:text; cursor:text;">
+${texto}
+</pre>
+
+<button onclick="copiar(${i})">Copiar</button>
+<button onclick="inserirConduta(${i})">Inserir na conduta</button>
+<button onclick="inserirPrescricao(${i})">Inserir na prescrição</button>
+<button onclick="document.body.removeChild(this.parentElement.parentElement)">Fechar</button>
+`;
+
+overlay.appendChild(modal);
+document.body.appendChild(overlay);
+
+}
+
+function copiar(i){
+
+navigator.clipboard.writeText(biblioteca[i].texto);
+alert("Protocolo copiado");
+
+}
+
+function excluir(i){
+
+biblioteca.splice(i,1);
+localStorage.setItem("biblioteca_protocolos", JSON.stringify(biblioteca));
+renderProtocolos();
+
+}
+
+function inserirConduta(i){
+
+let campo=document.querySelector("#conduta textarea");
+campo.value += "\n" + biblioteca[i].texto;
+
+}
+
+function inserirPrescricao(i){
+
+let campo=document.querySelector("#prescricao textarea");
+campo.value += "\n" + biblioteca[i].texto;
+
+}
+
+function pesquisarTexto(){
+
+let termo=document.getElementById("campoPesquisa").value.toLowerCase();
+let resultado=document.getElementById("resultadoPesquisa");
+
+resultado.innerHTML="";
+
+if(termo.length<2) return;
+
+biblioteca.forEach(p=>{
+
+if(p.nome.toLowerCase().includes(termo) || p.texto.toLowerCase().includes(termo)){
+
+let div=document.createElement("div");
+div.className="card";
+
+div.innerHTML=`<b>${p.nome}</b><br>${p.texto}`;
+
+resultado.appendChild(div);
+
+}
+
+});
+
+}
+
+window.onload=renderProtocolos;
+
+</script>
+
+</body>
+</html>
